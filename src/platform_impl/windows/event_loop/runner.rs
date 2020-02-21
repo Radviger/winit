@@ -130,27 +130,26 @@ impl<T> ELRShared<T> {
     }
 
     pub(crate) unsafe fn send_event(&self, event: Event<'_, T>) {
-        let handling_redraw = self
-            .runner
-            .borrow()
-            .as_ref()
-            .map(|r| RunnerState::HandlingRedraw == r.runner_state)
-            .unwrap_or(false);
-        let mut send = None;
-        if handling_redraw {
-            if let Event::RedrawRequested(_) = event {
-                send = Some(event);
+        if let Ok(runner) = self.runner.try_borrow() {
+            let handling_redraw = runner.as_ref()
+                .map(|r| RunnerState::HandlingRedraw == r.runner_state)
+                .unwrap_or(false);
+            let mut send = None;
+            if handling_redraw {
+                if let Event::RedrawRequested(_) = event {
+                    send = Some(event);
+                } else {
+                    self.buffer_event(event);
+                }
             } else {
-                self.buffer_event(event);
+                send = Some(event);
             }
-        } else {
-            send = Some(event);
-        }
-        if let Some(event) = send {
-            if let Err(event) = self.send_event_unbuffered(event) {
-                // If the runner is already borrowed, we're in the middle of an event loop invocation. Add
-                // the event to a buffer to be processed later.
-                self.buffer_event(event);
+            if let Some(event) = send {
+                if let Err(event) = self.send_event_unbuffered(event) {
+                    // If the runner is already borrowed, we're in the middle of an event loop invocation. Add
+                    // the event to a buffer to be processed later.
+                    self.buffer_event(event);
+                }
             }
         }
     }
