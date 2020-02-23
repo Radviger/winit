@@ -197,7 +197,7 @@ impl<T> ELRShared<T> {
     }
 
     pub(crate) fn main_events_cleared(&self) {
-        if let Ok(mut runner_ref) = self.runner.try_borrow() {
+        if let Ok(mut runner_ref) = self.runner.try_borrow_mut() {
             if let Some(ref mut runner) = *runner_ref {
                 runner.main_events_cleared();
             }
